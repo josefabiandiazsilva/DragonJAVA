@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reto 18 - Batalla contra el dragón</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d0b24; --panel:#161236; --ink:#e8e6ff;
+    --y:#ffd23f; --p:#ff5d73; --g:#3ddc97; --c:#4cc9f0; --v:#b388ff;
+    --acc:#ffd23f; --b:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
+    font-family:'VT323',ui-monospace,Menlo,Consolas,monospace}
+  body::before{content:'';position:fixed;inset:0;z-index:50;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 2px,transparent 2px 4px)}
+  body::after{content:'';position:fixed;inset:0;z-index:49;pointer-events:none;
+    background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.45) 100%)}
+
+  /* fondo de cuadritos que suben */
+  #px{position:fixed;inset:0;z-index:0;overflow:hidden}
+  #px i{position:absolute;bottom:-24px;width:var(--s);height:var(--s);background:var(--c);
+    opacity:.28;animation:rise var(--d) linear infinite;animation-delay:var(--dl)}
+  @keyframes rise{to{transform:translateY(-115vh)}}
+
+  .stage{position:relative;z-index:2;height:100vh;display:grid;
+    grid-template-columns:1.05fr 1fr;gap:2.4vw;padding:3vh 2.6vw 11vh}
+
+  /* panel de texto */
+  .panel{background:var(--panel);padding:3.2vh 2.2vw;overflow:auto;scrollbar-width:none;
+    display:flex;flex-direction:column;gap:1.7vh;align-self:stretch;
+    box-shadow:0 calc(var(--b)*-1) 0 var(--acc),0 var(--b) 0 var(--acc),
+               calc(var(--b)*-1) 0 0 var(--acc),var(--b) 0 0 var(--acc),
+               calc(var(--b)*2) calc(var(--b)*2) 0 rgba(0,0,0,.45)}
+  .panel::-webkit-scrollbar{display:none}
+  .r{animation:pop .55s steps(6) both;animation-delay:calc(var(--i)*.12s)}
+  @keyframes pop{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+  .badge{align-self:flex-start;font-family:'Press Start 2P',monospace;font-size:clamp(9px,1.35vh,16px);
+    background:var(--acc);color:#0d0b24;padding:1vh 1.1vw;letter-spacing:1px}
+  h1,h2{font-family:'Press Start 2P',monospace;line-height:1.35;text-transform:uppercase;
+    text-shadow:4px 4px 0 rgba(0,0,0,.6)}
+  h1{font-size:clamp(18px,3.5vh,46px);color:var(--y)}
+  h1 span{color:var(--p)}
+  h2{font-size:clamp(15px,2.9vh,36px);color:var(--acc)}
+  p,li{font-size:clamp(20px,3vh,38px);line-height:1.12}
+  b{color:var(--y);font-weight:400}
+  code{font-family:inherit;background:#2a2560;color:var(--g);padding:0 .45ch}
+  ul{list-style:none;display:flex;flex-direction:column;gap:1vh}
+  li{padding-left:2.4ch;position:relative}
+  li::before{content:'';position:absolute;left:.3ch;top:.38em;width:.62em;height:.62em;background:var(--acc)}
+  .hint{border-left:var(--b) solid var(--c);padding:.6vh 0 .6vh 1.2vw;color:#cfeaff}
+  .hint small{display:block;font-family:'Press Start 2P',monospace;font-size:clamp(8px,1.1vh,13px);
+    color:var(--c);margin-bottom:.8vh;letter-spacing:1px}
+  pre.out{background:#070617;color:var(--g);font-family:inherit;font-size:clamp(18px,2.7vh,34px);
+    line-height:1.12;padding:1.4vh 1.2vw;border:3px dashed #2f2a66;white-space:pre-wrap}
+  pre.out small{display:block;font-family:'Press Start 2P',monospace;font-size:clamp(8px,1.1vh,13px);
+    color:#7d78c8;margin-bottom:.8vh}
+  .check{color:#d9d4ff}
+  .check::before{content:'VERIFICA  ';font-family:'Press Start 2P',monospace;font-size:clamp(8px,1.1vh,13px);
+    color:var(--p);letter-spacing:1px;margin-right:.4vw}
+  .chips{display:flex;flex-wrap:wrap;gap:1.2vh .8vw}
+  .chip{font-family:'Press Start 2P',monospace;font-size:clamp(9px,1.4vh,17px);padding:1vh 1vw;
+    background:#241e55;color:var(--ink);border:3px solid var(--c)}
+  .chip:nth-child(2n){border-color:var(--p)}
+  .chip:nth-child(3n){border-color:var(--g)}
+  .start{font-family:'Press Start 2P',monospace;font-size:clamp(10px,1.6vh,20px);color:var(--g);
+    animation:blink 1s steps(2) infinite;margin-top:auto}
+  @keyframes blink{50%{opacity:0}}
+
+  .tbl{display:grid;grid-template-columns:1.15fr .5fr .65fr 2.6fr;gap:.4vh 1vw;
+    font-size:clamp(16px,2.3vh,28px);line-height:1.05}
+  .tbl .th{color:var(--acc);font-family:'Press Start 2P',monospace;font-size:clamp(7px,.95vh,11px);padding-top:.4vh}
+  .tbl span{padding:.3vh 0;border-bottom:2px dashed #2f2a66}
+  .tbl .th{border-bottom:2px solid #4a42a0}
+
+  /* escena */
+  .scene{align-self:center;position:relative;background:#000;
+    box-shadow:0 calc(var(--b)*-1) 0 var(--acc),0 var(--b) 0 var(--acc),
+               calc(var(--b)*-1) 0 0 var(--acc),var(--b) 0 0 var(--acc),
+               calc(var(--b)*2) calc(var(--b)*2) 0 rgba(0,0,0,.45)}
+  canvas{display:block;width:100%;height:auto;aspect-ratio:320/200;image-rendering:pixelated;
+    image-rendering:crisp-edges;image-rendering:pixelated}
+
+  /* barra inferior */
+  .nav{position:fixed;left:0;right:0;bottom:0;height:9vh;z-index:10;display:flex;align-items:center;
+    justify-content:center;gap:1.4vw;background:linear-gradient(transparent,rgba(5,4,20,.9) 40%)}
+  .node{width:5.2vh;height:5.2vh;background:#241e55;border:3px solid #4a42a0;color:#9d97e0;
+    font-family:'Press Start 2P',monospace;font-size:clamp(8px,1.5vh,16px);cursor:pointer;
+    display:grid;place-items:center;transition:transform .1s steps(2)}
+  .node:hover{transform:translateY(-4px)}
+  .node.done{background:var(--g);border-color:#1f8f62;color:#0d0b24}
+  .node.now{background:var(--y);border-color:#b8921a;color:#0d0b24;animation:bob .8s steps(2) infinite}
+  @keyframes bob{50%{transform:translateY(-5px)}}
+  .arrow{background:none;border:none;color:var(--ink);font-family:'Press Start 2P',monospace;
+    font-size:clamp(12px,2.4vh,26px);cursor:pointer;padding:1vh 1vw}
+  .arrow:hover{color:var(--y)}
+  .keys{position:fixed;right:2vw;bottom:2.4vh;z-index:11;font-family:'Press Start 2P',monospace;
+    font-size:clamp(7px,1vh,12px);color:#6d68b5}
+
+  @media (max-width:900px){
+    .stage{grid-template-columns:1fr;grid-auto-rows:auto;overflow:auto}
+    html,body{overflow:auto}
+  }
+</style>
+</head>
+<body>
+<div id="px"></div>
+
+<main class="stage">
+  <section class="panel" id="panel"></section>
+  <section class="scene"><canvas id="cv" aria-label="Escena animada del combate"></canvas></section>
+</main>
+
+<nav class="nav" id="nav"></nav>
+<div class="keys">FLECHAS / ESPACIO: NAVEGAR &nbsp; F: PANTALLA COMPLETA</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ============================================================
+   CONTENIDO DE LAS DIAPOSITIVAS
+   ============================================================ */
+const accents = ['#ffd23f', '#4cc9f0', '#3ddc97', '#ff5d73', '#b388ff', '#ff9f1c', '#ff7ad9'];
+
+const steps = [
+  {
+    title: 'El primer golpe',
+    intro: 'Un dragón bloquea tu camino. Tiene <b>120 puntos de vida</b>. Tu héroe lo ataca una sola vez.',
+    bullets: [
+      'Crear la variable <code>vidaDragon</code> con valor 120.',
+      'Generar un daño aleatorio entre <b>10 y 25</b> y restarlo a la vida del dragón.',
+      'Mostrar el daño causado y la vida que le queda al dragón.'
+    ],
+    hint: '<code>rand.nextInt(16) + 10</code> produce un número entre 10 y 25.',
+    out: 'Atacas al dragón y le causas 17 de daño.\nVida del dragón: 103',
+    check: 'Ejecuten el programa varias veces y comprueben que el daño cambia.'
+  },
+  {
+    title: 'El dragón contraataca',
+    intro: 'Ahora el dragón también pelea. Tu héroe empieza con <b>100 puntos de vida</b> y el dragón causa un daño aleatorio entre <b>8 y 20</b>.',
+    bullets: [
+      'Agregar la variable <code>vidaJugador</code> y un contador de turnos.',
+      'Repetir los turnos mientras ambos tengan vida: primero ataca el héroe y después el dragón, <b>solo si sigue vivo</b>.',
+      'En cada turno mostrar el daño de cada uno y la vida de ambos.',
+      'Al terminar, mostrar quién ganó.'
+    ],
+    hint: null,
+    out: '--- Turno 1 ---\nGolpeas al dragón: -18\nEl dragón te muerde: -12\nTú: 88 | Dragón: 102\n...\nEl dragón te derrotó.',
+    check: 'Ejecuten varias veces: a veces debe ganar el héroe y a veces el dragón.'
+  },
+  {
+    title: 'Tú decides',
+    intro: 'Hasta ahora el combate se resolvía solo. Es hora de tomar el control.',
+    bullets: [
+      'En cada turno, mostrar un menú con dos opciones: <b>1. Atacar</b> y <b>2. Huir</b>.',
+      'Leer la opción con <code>Scanner</code> y resolverla con un <code>switch</code>.',
+      'Si ataca, el dragón responde como antes. Si huye, el combate termina con un mensaje.',
+      'Si escribe una opción inválida, mostrar un aviso y <b>no</b> darle el turno al dragón.'
+    ],
+    hint: 'Usen una variable booleana (por ejemplo <code>accionValida</code>) para decidir si el dragón responde.',
+    out: 'Tú: 100 | Dragón: 120\n1. Atacar   2. Huir\nElige: 1\nAtacas: -21\nEl dragón te ataca: -9',
+    check: null
+  },
+  {
+    title: 'Un héroe con recursos',
+    intro: 'Un buen héroe no solo golpea. Agreguen nuevas acciones al menú:',
+    bullets: [
+      '<b>3. Defenderse:</b> el siguiente daño que reciba el héroe se reduce a la mitad. Dura un solo turno.',
+      '<b>4. Usar poción:</b> cura 20 puntos de vida. Lleva solo <b>3 pociones</b> y su vida nunca puede superar 100.',
+      'Si ya no quedan pociones, mostrar un aviso y no gastar el turno.',
+      'El menú debe mostrar cuántas pociones quedan.'
+    ],
+    hint: 'Necesitan una variable <code>boolean defendiendo</code> y un contador <code>pociones</code>.',
+    out: '1. Atacar  2. Huir  3. Defenderse  4. Poción (2)\nElige: 4\nTe curas 20 puntos. Pociones restantes: 1',
+    check: 'Prueben gastar las 3 pociones y pedir una cuarta; prueben curarse con la vida casi llena.'
+  },
+  {
+    title: 'Una leyenda en construcción',
+    intro: 'Es momento de darle personalidad al juego y llevar registro de la hazaña.',
+    bullets: [
+      'Al inicio, pedir el <b>nombre del héroe</b> y usarlo en los mensajes del combate.',
+      'El dragón puede lanzar un <b>ataque crítico</b>: con un 15% de probabilidad su daño se duplica y se muestra un mensaje especial.',
+      'Llevar la cuenta de los <b>turnos jugados</b> y del <b>daño total causado</b> al dragón.',
+      'Al terminar, mostrar un resumen con el nombre, el resultado, los turnos y el daño total.'
+    ],
+    hint: '<code>rand.nextInt(100) &lt; 15</code> se cumple el 15% de las veces. Lean el nombre con <code>sc.next()</code> (una sola palabra): no deja saltos de línea pendientes después de un <code>nextInt()</code>.',
+    out: '===== RESUMEN =====\nHéroe: Aragorn\nResultado: Victoria\nTurnos jugados: 7\nDaño total causado: 134',
+    check: null
+  },
+  {
+    title: 'Elige a tu héroe',
+    intro: 'Un solo héroe se queda corto. Ahora el jugador elige con quién pelea.',
+    bullets: [
+      'Mostrar un menú para <b>elegir entre 4 héroes</b>; cada uno define su vida máxima y su rango de daño.',
+      'La poción y la defensa deben respetar la vida máxima del héroe elegido, que ya no siempre es 100.'
+    ],
+    table: [
+      ['Héroe', 'Vida', 'Daño', 'Habilidad o debilidad'],
+      ['Caballero', '120', '10-20', 'Bloqueo: 25% de recibir la mitad del daño'],
+      ['Mago', '80', '15-30', 'Frágil: pega fuerte pero aguanta poco'],
+      ['Ladrón', '90', '8-18', 'Esquiva el 30% de los ataques'],
+      ['Bárbaro', '100', '10-25', '20% de golpe doble, pero sin pociones']
+    ],
+    hint: 'Guarden <code>vidaMax</code>, <code>danoMin</code> y <code>danoMax</code> al elegir. Para esquivar o bloquear usen <code>rand.nextInt(100) &lt; 30</code>.',
+    out: 'Elige: 3\nLadrón entra en combate. Vida: 90\nEsquivas el ataque del dragón.',
+    check: null
+  }
+];
+
+/* ============================================================
+   PANEL DE TEXTO Y NAVEGACIÓN
+   ============================================================ */
+const panel = document.getElementById('panel');
+const nav = document.getElementById('nav');
+let current = -1;
+
+function slideHTML(i){
+  if (i === 0){
+    return `
+      <div class="badge r">RETO 18</div>
+      <h1 class="r">Batalla contra<br>el <span>dragón</span></h1>
+      <p class="r"><b>Objetivo:</b> construir, paso a paso, un pequeño juego de combate por turnos entre un héroe y un dragón. Cada paso se puede ejecutar por sí solo antes de pasar al siguiente.</p>
+      <div class="chips r">
+        <span class="chip">Random</span><span class="chip">while</span><span class="chip">Scanner</span>
+        <span class="chip">switch</span><span class="chip">boolean</span><span class="chip">contadores</span>
+      </div>
+      <p class="r">Guarden una copia de cada paso (<code>BatallaDragon1.java</code>, <code>BatallaDragon2.java</code>...) para ver cómo evoluciona su programa.</p>
+      <div class="start r">PRESIONA &rarr; PARA COMENZAR</div>`;
+  }
+  const s = steps[i-1];
+  let h = `<div class="badge r">PASO ${i} / 6</div><h2 class="r">${s.title}</h2><p class="r">${s.intro}</p>`;
+  h += `<ul class="r">${s.bullets.map(b => `<li>${b}</li>`).join('')}</ul>`;
+  if (s.table) h += `<div class="tbl r">${s.table.map((row, ri) => row.map(c => `<span${ri === 0 ? ' class="th"' : ''}>${c}</span>`).join('')).join('')}</div>`;
+  if (s.hint) h += `<div class="hint r"><small>PISTA</small>${s.hint}</div>`;
+  h += `<pre class="out r"><small>EJEMPLO DE SALIDA</small>${s.out}</pre>`;
+  if (s.check) h += `<p class="check r">${s.check}</p>`;
+  return h;
+}
+
+function render(i){
+  panel.style.setProperty('--acc', accents[i]);
+  document.documentElement.style.setProperty('--acc', accents[i]);
+  document.querySelector('.scene').style.setProperty('--acc', accents[i]);
+  panel.innerHTML = slideHTML(i);
+  panel.scrollTop = 0;
+  [...panel.children].forEach((el, k) => el.style.setProperty('--i', k));
+  [...nav.querySelectorAll('.node')].forEach((n, k) => {
+    n.classList.toggle('now', k === i);
+    n.classList.toggle('done', k < i);
+  });
+}
+
+function buildNav(){
+  const prev = document.createElement('button');
+  prev.className = 'arrow'; prev.textContent = '<'; prev.onclick = () => go(current - 1);
+  nav.appendChild(prev);
+  for (let k = 0; k <= 6; k++){
+    const n = document.createElement('button');
+    n.className = 'node';
+    n.textContent = k === 0 ? 'I' : k;
+    n.title = k === 0 ? 'Inicio' : 'Paso ' + k;
+    n.onclick = () => go(k);
+    nav.appendChild(n);
+  }
+  const next = document.createElement('button');
+  next.className = 'arrow'; next.textContent = '>'; next.onclick = () => go(current + 1);
+  nav.appendChild(next);
+}
+
+function go(i){
+  if (i < 0 || i > 6 || i === current) return;
+  current = i;
+  render(i);
+  startScene(i);
+}
+
+document.addEventListener('keydown', e => {
+  if (['ArrowRight','PageDown',' ','Enter'].includes(e.key)){ e.preventDefault(); go(current + 1); }
+  else if (['ArrowLeft','PageUp','Backspace'].includes(e.key)){ e.preventDefault(); go(current - 1); }
+  else if (e.key === 'Home') go(0);
+  else if (e.key === 'End') go(6);
+  else if (e.key === 'f' || e.key === 'F'){
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  }
+});
+
+/* partículas de fondo (cuadritos) */
+(() => {
+  const host = document.getElementById('px');
+  const cols = ['#4cc9f0','#ff5d73','#3ddc97','#ffd23f','#b388ff'];
+  for (let i = 0; i < 26; i++){
+    const q = document.createElement('i');
+    const size = [6, 8, 10, 14][i % 4];
+    q.style.cssText = `left:${Math.random()*100}%;--s:${size}px;--c:${cols[i%cols.length]};` +
+                      `--d:${14 + Math.random()*18}s;--dl:${-Math.random()*30}s`;
+    host.appendChild(q);
+  }
+})();
+
+/* ============================================================
+   ESCENA PIXEL ART (canvas 320x200)
+   ============================================================ */
+const W = 320, H = 200, GROUND = 130;
+const cv = document.getElementById('cv');
+cv.width = W; cv.height = H;
+const ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+const rnd = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+function mk(rows, pal){
+  const w = Math.max(...rows.map(r => r.length));
+  const c = document.createElement('canvas');
+  c.width = w; c.height = rows.length;
+  const g = c.getContext('2d');
+  rows.forEach((r, y) => {
+    for (let x = 0; x < r.length; x++){
+      const col = pal[r[x]];
+      if (col){ g.fillStyle = col; g.fillRect(x, y, 1, 1); }
+    }
+  });
+  return c;
+}
+
+const heroSpr = mk([
+  '....rr......',
+  '...hhhhh....',
+  '..hhhhhhh...',
+  '..hsskssh...',
+  '..hssssh....',
+  '...hhhh.....',
+  '..bbbbbbw...',
+  '.sbbggbbsw..',
+  '.sbbbbbb.w..',
+  '..bbbbbb.w..',
+  '..lggggl.g..',
+  '..bb..bb....',
+  '..bb..bb....',
+  '.kkk..kkk...'
+], { r:'#ff5d73', h:'#aab4c8', s:'#f4c9a0', k:'#1b1b2f', b:'#3a6ea5', g:'#ffd23f', w:'#ffffff', l:'#7a4b2a' });
+
+const dragonSpr = mk([
+  '......w.......GG........',
+  '.....wG......GGGG.......',
+  '....GGGG....GGrGGG......',
+  '...GGggGG..GGGrrGGG.....',
+  '..GeGGGGGGGGGGGrrGGG....',
+  '.GGGGGGGGGGggGGGrrGGG...',
+  'GGGGGGGGGGGGGGGGGGGGGG..',
+  'wGwGGGGGGGGGGGGGGGGGGGG.',
+  '.GGGGyyyyGGGGGGGGGGGGGGG',
+  '..GGyyyyyyGGGGGGGGGGGGGG',
+  '...GyyyyyyGGGGGGGGGGGG..',
+  '....GGyyyyGGGGGGGGGGG...',
+  '.....GGGGGGGGGGGGGGGG...',
+  '....GGG..GGG..GGG.GGG...',
+  '...kkkk..kkk..kkk.kkkk..'
+], { G:'#2e9e5b', g:'#3ddc97', y:'#f2d27a', r:'#c1324a', k:'#14301f', w:'#ffffff', e:'#ffd23f' });
+
+const shieldSpr = mk([
+  'dddddddd',
+  'dcccwccd',
+  'dcccwccd',
+  'dwwwwwwd',
+  'dcccwccd',
+  '.dcccwd.',
+  '.dccccd.',
+  '..dccd..',
+  '...dd...'
+], { d:'#2a7fa5', c:'#4cc9f0', w:'#e8f9ff' });
+
+const mageSpr = mk([
+  '....pp...yy.',
+  '...pppp..yy.',
+  '..pppppp..w.',
+  '.pppppppp.w.',
+  '..psksp...w.',
+  '..pssssp..w.',
+  '..PPPPPP..w.',
+  '.sPPyyPPs.w.',
+  '..PPPPPP..w.',
+  '..PPPPPP..w.',
+  '..PPyyPP..w.',
+  '..PPPPPP....',
+  '.PPPPPPPP...',
+  '.kkkkkkkk...'
+], { p:'#9b6bff', P:'#6a3fc4', y:'#ffd23f', s:'#f4c9a0', k:'#1b1b2f', w:'#e8e6ff' });
+
+const thiefSpr = mk([
+  '....nn......',
+  '...nnnn.....',
+  '..nnnnnn....',
+  '..nsksnn....',
+  '..nnssnn....',
+  '...nNNn.....',
+  '..NNNNNN.d..',
+  '.sNNllNNsd..',
+  '.sNNNNNN.d..',
+  '..NNNNNN....',
+  '..nnllnn....',
+  '..NN..NN....',
+  '..NN..NN....',
+  '.kkk..kkk...'
+], { n:'#2f6b4f', N:'#1f4a37', s:'#f4c9a0', k:'#1b1b2f', l:'#7a4b2a', d:'#dfe6f0' });
+
+const barbSpr = mk([
+  '..oooo...XX.',
+  '.oooooo..XXX',
+  '.osskso..aX.',
+  '.ossssoo.a..',
+  '..ssss...a..',
+  '.ssssss..a..',
+  '.sssssss.a..',
+  '.sfffffs.a..',
+  '..ffffff.a..',
+  '..ffffff.a..',
+  '..ssffss.a..',
+  '..ff..ff....',
+  '..ss..ss....',
+  '.kkk..kkk...'
+], { o:'#e8761a', s:'#e0a070', k:'#1b1b2f', f:'#7a4b2a', a:'#7a4b2a', X:'#cfd6e6' });
+
+const HEROES = [
+  { id:'caballero', name:'CABALLERO', spr:heroSpr,  hp:120, dmin:10, dmax:20, pot:3, perk:'BLOQUEO: 25% RECIBES LA MITAD' },
+  { id:'mago',      name:'MAGO',      spr:mageSpr,  hp:80,  dmin:15, dmax:30, pot:3, perk:'FRAGIL: PEGA FUERTE, AGUANTA POCO' },
+  { id:'ladron',    name:'LADRON',    spr:thiefSpr, hp:90,  dmin:8,  dmax:18, pot:3, perk:'ESQUIVA EL 30% DE LOS ATAQUES' },
+  { id:'barbaro',   name:'BARBARO',   spr:barbSpr,  hp:100, dmin:10, dmax:25, pot:0, perk:'GOLPE DOBLE 20%, SIN POCIONES' }
+];
+
+const HERO_X = 40, HERO_S = 3, DRG_X = 196, DRG_S = 4;
+const heroY = GROUND - heroSpr.height * HERO_S + 2;
+const drgY  = GROUND - dragonSpr.height * DRG_S + 2;
+const FIRE = ['#ff5d73', '#ffd23f', '#ff9f1c', '#ffffff'];
+
+/* estado de la escena */
+const s = {};
+function reset(o = {}){
+  Object.assign(s, {
+    heroHp:100, heroShown:100, drgHp:120, drgShown:120,
+    hbar:false, dbar:false, hox:0, dox:0, hflash:0, dflash:0,
+    shield:false, box:null, menu:null, floaters:[], parts:[],
+    name:'', summary:null, banner:null, bannerCol:'#ffd23f',
+    potions:null, embers:false,
+    heroMax:100, hmin:10, hmax:25, hspr:heroSpr, select:null
+  });
+  Object.assign(s, o);
+  if (o.heroHp != null) s.heroShown = o.heroHp;
+  if (o.drgHp != null)  s.drgShown = o.drgHp;
+}
+reset();
+
+/* estrellas y montañas */
+const stars = Array.from({length:46}, () => ({ x:rnd(0,W-1), y:rnd(0,100), ph:Math.random()*6 }));
+const mount1 = [], mount2 = [];
+for (let x = 0; x < W; x += 8){
+  mount1.push(Math.round((30 + 22*Math.abs(Math.sin(x*0.021)) + 8*Math.sin(x*0.09)) / 4) * 4);
+  mount2.push(Math.round((16 + 14*Math.abs(Math.sin(x*0.034+1)) + 6*Math.sin(x*0.13)) / 4) * 4);
+}
+
+function setFont(px){ ctx.font = px + 'px "Press Start 2P", ui-monospace, monospace'; }
+function text(str, x, y, col = '#fff', align = 'left', px = 8){
+  setFont(px);
+  ctx.textAlign = align;
+  ctx.fillStyle = '#000'; ctx.fillText(str, x + 1, y + 1);
+  ctx.fillStyle = col;    ctx.fillText(str, x, y);
+}
+
+function drawBG(t){
+  const bands = ['#0d0b24','#13103a','#1b1650','#271e66','#3a2a7a'];
+  bands.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(0, i*26, W, 26); });
+  stars.forEach(st => {
+    const a = 0.35 + 0.65 * (Math.sin(t/500 + st.ph) * 0.5 + 0.5);
+    ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`;
+    ctx.fillRect(st.x, st.y, 2, 2);
+  });
+  // luna
+  ctx.fillStyle = '#fff3c4';
+  for (let dy = -13; dy <= 13; dy++){
+    const hw = Math.floor(Math.sqrt(169 - dy*dy));
+    ctx.fillRect(272 - hw, 30 + dy, hw*2, 1);
+  }
+  ctx.fillStyle = '#e6d9a0';
+  ctx.fillRect(266, 24, 4, 4); ctx.fillRect(274, 34, 5, 3); ctx.fillRect(268, 36, 3, 3);
+  // montañas
+  ctx.fillStyle = '#221a52';
+  mount1.forEach((h, i) => ctx.fillRect(i*8, GROUND - h, 8, h));
+  ctx.fillStyle = '#1a1442';
+  mount2.forEach((h, i) => ctx.fillRect(i*8, GROUND - h, 8, h));
+  // suelo
+  ctx.fillStyle = '#2e7d4f'; ctx.fillRect(0, GROUND, W, 5);
+  ctx.fillStyle = '#245f3d'; ctx.fillRect(0, GROUND + 4, W, 2);
+  ctx.fillStyle = '#4a3022'; ctx.fillRect(0, GROUND + 6, W, H - GROUND - 6);
+  ctx.fillStyle = '#3b261b';
+  for (let y = GROUND + 6, r = 0; y < H; y += 12, r++){
+    for (let x = (r % 2) * 16; x < W; x += 32) ctx.fillRect(x, y, 16, 12);
+  }
+}
+
+function drawSpr(sp, x, y, sc, fx){
+  ctx.save();
+  if (fx.fell){ ctx.globalAlpha = 0.45; ctx.filter = 'grayscale(1)'; y += sp.height * sc * 0.3; }
+  else if (fx.flash){ ctx.filter = 'brightness(3)'; x += rnd(-2, 2); }
+  ctx.drawImage(sp, Math.round(x), Math.round(y), sp.width*sc, sp.height*sc);
+  ctx.restore();
+}
+
+function bar(x, y, w, label, shown, max, col){
+  text(label, x, y - 5, '#fff');
+  ctx.fillStyle = '#000'; ctx.fillRect(x - 2, y - 2, w + 4, 12);
+  ctx.fillStyle = '#2a2550'; ctx.fillRect(x, y, w, 8);
+  const fw = Math.round(w * Math.max(0, shown) / max);
+  ctx.fillStyle = col; ctx.fillRect(x, y, fw, 8);
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x, y, fw, 2);
+  text(Math.ceil(Math.max(0, shown)) + '/' + max, x, y + 19, '#cfc9ff');
+}
+
+function drawPotions(){
+  for (let i = 0; i < 3; i++){
+    const bx = 10 + i * 12, by = 42;
+    const full = i < s.potions;
+    ctx.fillStyle = '#000'; ctx.fillRect(bx - 1, by - 1, 10, 13);
+    ctx.fillStyle = full ? '#ff5d73' : '#3a3560';
+    ctx.fillRect(bx + 2, by, 4, 3);
+    ctx.fillRect(bx, by + 3, 8, 8);
+    if (full){ ctx.fillStyle = '#ffb3be'; ctx.fillRect(bx + 1, by + 4, 2, 3); }
+  }
+}
+
+function drawBox(t){
+  if (!s.box && !s.menu) return;
+  const x = 8, y = 142, w = 304, h = 52;
+  ctx.fillStyle = '#000'; ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+  ctx.fillStyle = '#fff'; ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
+  ctx.fillStyle = '#0d0b24'; ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
+  const lines = s.box || [];
+  if (s.menu){
+    const n = s.menu.items.length, rows = Math.ceil(n / 2);
+    const my = 190 - (rows - 1) * 14;
+    lines.forEach((ln, i) => { if (157 + i*12 < my - 10) text(ln, 20, 157 + i*12, '#ffffff'); });
+    s.menu.items.forEach((it, i) => {
+      const cx = 28 + (i % 2) * 140, cy = my + Math.floor(i / 2) * 14;
+      const on = i === s.menu.sel;
+      if (on && Math.floor(t / 300) % 2 === 0) text('>', cx - 12, cy, '#ffd23f');
+      text(it, cx, cy, on ? '#ffd23f' : '#8f8ad0');
+    });
+  } else {
+    lines.forEach((ln, i) => text(ln, 20, 157 + i * 14, i === 0 ? '#ffd23f' : '#ffffff'));
+  }
+}
+
+function drawSelect(t){
+  HEROES.forEach((h, i) => {
+    const cw = 72, ch = 100, x = 5 + i * 77, y = 22;
+    const on = i === s.select.sel;
+    const by = on ? Math.round(Math.sin(t / 160) * 2) - 2 : 0;
+    ctx.fillStyle = '#000'; ctx.fillRect(x - 2, y + by - 2, cw + 4, ch + 4);
+    ctx.fillStyle = on ? '#ffd23f' : '#4a42a0'; ctx.fillRect(x - 1, y + by - 1, cw + 2, ch + 2);
+    ctx.fillStyle = on ? '#2a2560' : '#14102e'; ctx.fillRect(x + 1, y + by + 1, cw - 2, ch - 2);
+    ctx.save();
+    if (!on) ctx.globalAlpha = 0.6;
+    ctx.drawImage(h.spr, x + Math.round((cw - h.spr.width * 3) / 2), y + by + 14, h.spr.width * 3, h.spr.height * 3);
+    ctx.restore();
+    text(h.name, x + cw / 2, y + by + 72, on ? '#ffd23f' : '#cfc9ff', 'center', 6);
+    text('VIDA ' + h.hp, x + cw / 2, y + by + 84, '#3ddc97', 'center', 6);
+    text('DANO ' + h.dmin + '-' + h.dmax, x + cw / 2, y + by + 94, '#ff9f9f', 'center', 6);
+  });
+}
+
+function drawSummary(){
+  if (!s.summary) return;
+  const x = 36, y = 34, w = 248, h = 104;
+  ctx.fillStyle = '#000'; ctx.fillRect(x - 3, y - 3, w + 6, h + 6);
+  ctx.fillStyle = '#ffd23f'; ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+  ctx.fillStyle = '#0d0b24'; ctx.fillRect(x, y, w, h);
+  s.summary.lines.slice(0, s.summary.shown).forEach((ln, i) => {
+    text(ln, x + 14, y + 20 + i * 18, i === 0 ? '#ffd23f' : (i === 2 ? '#3ddc97' : '#ffffff'));
+  });
+}
+
+function frame(t){
+  // suavizar barras de vida
+  ['hero','drg'].forEach(k => {
+    const hp = s[k + 'Hp'];
+    s[k + 'Shown'] += (hp - s[k + 'Shown']) * 0.12;
+    if (Math.abs(hp - s[k + 'Shown']) < 0.4) s[k + 'Shown'] = hp;
+  });
+  ctx.imageSmoothingEnabled = false;
+  drawBG(t);
+
+  // brasas decorativas
+  if (s.embers && Math.random() < 0.25){
+    s.parts.push({ x:DRG_X + rnd(0, 60), y:drgY + rnd(10, 40), vx:(Math.random()-.5)*.3, vy:-.5,
+                   life:50, color:pick(FIRE), size:2 });
+  }
+
+  const now = performance.now();
+  const hdy = Math.round(Math.sin(t / 380));
+  const ddy = Math.round(Math.sin(t / 520) * 2);
+
+  if (s.select){
+    drawSelect(t);
+  } else {
+    drawSpr(dragonSpr, DRG_X + s.dox, drgY + ddy, DRG_S, { flash: now < s.dflash, fell: s.drgHp <= 0 });
+    drawSpr(s.hspr, HERO_X + s.hox, heroY + hdy, HERO_S, { flash: now < s.hflash, fell: s.heroHp <= 0 });
+  }
+
+  if (s.shield){
+    ctx.save();
+    ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t / 90);
+    ctx.drawImage(shieldSpr, Math.round(HERO_X + s.hox + 32), heroY + 8 + hdy, 24, 27);
+    ctx.restore();
+  }
+
+  // partículas
+  s.parts = s.parts.filter(p => p.life > 0);
+  s.parts.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.life--;
+    ctx.globalAlpha = Math.min(1, p.life / 14);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+    ctx.globalAlpha = 1;
+  });
+
+  // HUD
+  if (s.hbar) bar(10, 16, 100, (s.name || 'HEROE').slice(0, 10), s.heroShown, s.heroMax, s.heroShown < s.heroMax * 0.3 ? '#ff5d73' : '#3ddc97');
+  if (s.dbar) bar(210, 16, 100, 'DRAGON', s.drgShown, 120, '#ff5d73');
+  if (s.hbar && s.potions != null) drawPotions();
+
+  // números flotantes
+  s.floaters = s.floaters.filter(f => f.life > 0);
+  s.floaters.forEach(f => {
+    f.y -= 0.35; f.life--;
+    ctx.globalAlpha = Math.min(1, f.life / 15);
+    text(f.text, f.x, Math.round(f.y), f.col, 'center', f.size);
+    ctx.globalAlpha = 1;
+  });
+
+  if (s.banner){
+    const bob = Math.round(Math.sin(t / 150) * 2);
+    text(s.banner, W / 2, 78 + bob, s.bannerCol, 'center', 16);
+  }
+  drawBox(t);
+  drawSummary();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ============================================================
+   ACCIONES Y GUIONES DE CADA PASO
+   ============================================================ */
+let runId = 0;
+const sleep = (ms, id) => new Promise((res, rej) => setTimeout(() => id === runId ? res() : rej('cancel'), ms));
+
+function floatTxt(x, y, txt, col, size = 12){ s.floaters.push({ x, y, text:txt, col, size, life:70 }); }
+function fire(n = 1){
+  for (let i = 0; i < n; i++){
+    s.parts.push({ x:DRG_X + s.dox + 4, y:drgY + 30 + rnd(-4, 4),
+                   vx:-(1.6 + Math.random() * 2.2), vy:(Math.random() - .5) * .8,
+                   life:rnd(26, 46), color:pick(FIRE), size:rnd(3, 5) });
+  }
+}
+function sparkle(){
+  for (let i = 0; i < 16; i++){
+    s.parts.push({ x:HERO_X + rnd(0, 36), y:heroY + rnd(0, 42), vx:0, vy:-.7, life:rnd(30, 50), color:'#3ddc97', size:2 });
+  }
+}
+function hitDrg(d){
+  s.drgHp = Math.max(0, s.drgHp - d);
+  s.dflash = performance.now() + 220;
+  floatTxt(DRG_X + 46, drgY + 6, '-' + d, '#ffd23f');
+}
+function hitHero(d, crit){
+  s.heroHp = Math.max(0, s.heroHp - d);
+  s.hflash = performance.now() + 220;
+  floatTxt(HERO_X + 18, heroY - 4, '-' + d, crit ? '#ff5d73' : '#ffffff', crit ? 16 : 12);
+}
+function heal(n){
+  const a = Math.max(0, Math.min(s.heroMax, s.heroHp + n) - s.heroHp);
+  s.heroHp += a;
+  sparkle();
+  floatTxt(HERO_X + 18, heroY - 4, '+' + a, '#3ddc97');
+}
+
+async function heroAttack(z, o = {}){
+  s.hox = 30; await z(90);
+  s.hox = 64; await z(110);
+  let d = rnd(s.hmin, s.hmax);
+  if (o.dbl){ d *= 2; floatTxt(DRG_X + 46, drgY - 12, 'x2', '#ff9f1c', 10); }
+  hitDrg(d);
+  s.hox = 44; await z(90);
+  s.hox = 0;  await z(90);
+  return d;
+}
+async function dragonAttack(z, o = {}){
+  s.dox = -30; await z(90);
+  s.dox = -64;
+  if (o.crit){ for (let i = 0; i < 12; i++){ fire(6); await z(60); } }
+  else await z(110);
+  let e = rnd(8, 20);
+  if (o.crit) e *= 2;
+  if (o.half) e = Math.floor(e / 2);
+  if (o.block){ e = Math.floor(e / 2); floatTxt(HERO_X + 18, heroY - 18, 'BLOQUEO', '#4cc9f0', 8); }
+  if (o.noKill) e = Math.max(1, Math.min(e, s.heroHp - 1));
+  if (o.dodge){ e = 0; s.hox = -16; floatTxt(HERO_X + 18, heroY - 4, 'ESQUIVA', '#4cc9f0', 10); }
+  else hitHero(e, o.crit);
+  s.dox = -44; await z(90);
+  s.dox = 0;   await z(90);
+  s.hox = 0;
+  return e;
+}
+
+/* portada */
+async function run0(z){
+  reset({ embers:true });
+  const msgs = ['UN DRAGON BLOQUEA TU CAMINO', 'PREPARA TU CODIGO, HEROE'];
+  let k = 0;
+  for (;;){
+    s.box = [msgs[k++ % 2]];
+    await z(2200);
+    if (k % 2 === 0){ for (let i = 0; i < 14; i++){ fire(5); await z(70); } }
+  }
+}
+
+/* paso 1: un solo golpe */
+async function run1(z){
+  for (;;){
+    reset({ dbar:true });
+    s.box = ['EL HEROE ATACA AL DRAGON'];
+    await z(1400);
+    const d = await heroAttack(z);
+    s.box = ['DANO CAUSADO: ' + d, 'VIDA DEL DRAGON: ' + s.drgHp];
+    await z(3000);
+  }
+}
+
+/* paso 2: pelea automática */
+async function run2(z){
+  for (;;){
+    reset({ hbar:true, dbar:true });
+    s.box = ['EL COMBATE COMIENZA'];
+    await z(1300);
+    let t = 1;
+    while (s.heroHp > 0 && s.drgHp > 0){
+      const head = '--- TURNO ' + t + ' ---';
+      s.box = [head]; await z(450);
+      const d = await heroAttack(z);
+      s.box = [head, 'GOLPEAS AL DRAGON: -' + d]; await z(500);
+      if (s.drgHp > 0){
+        const e = await dragonAttack(z);
+        s.box = [head, 'GOLPEAS AL DRAGON: -' + d, 'EL DRAGON TE MUERDE: -' + e];
+        await z(800);
+      }
+      t++;
+    }
+    const win = s.drgHp <= 0;
+    s.banner = win ? 'VICTORIA' : 'DERROTA';
+    s.bannerCol = win ? '#ffd23f' : '#ff5d73';
+    s.box = [win ? 'VENCISTE AL DRAGON' : 'EL DRAGON TE DERROTO'];
+    await z(3400);
+  }
+}
+
+/* paso 3: menú */
+async function run3(z){
+  for (;;){
+    reset({ hbar:true, dbar:true });
+    s.menu = { items:['1 ATACAR', '2 HUIR'], sel:0 };
+    s.box = ['ELIGE UNA OPCION'];
+    await z(1400);
+    for (let k = 0; k < 2; k++){
+      s.menu.sel = 0; s.box = ['ELIGE: 1']; await z(550);
+      const d = await heroAttack(z);
+      s.box = ['ATACAS: -' + d]; await z(450);
+      const e = await dragonAttack(z, { noKill:true });
+      s.box = ['ATACAS: -' + d, 'EL DRAGON TE ATACA: -' + e]; await z(1000);
+      s.box = ['ELIGE UNA OPCION']; await z(600);
+      if (k === 0){
+        s.menu.sel = -1; s.box = ['ELIGE: 7']; await z(900);
+        s.box = ['OPCION INVALIDA', 'EL DRAGON NO ATACA ESTE TURNO']; await z(2200);
+        s.menu.sel = 0; s.box = ['ELIGE UNA OPCION']; await z(600);
+      }
+    }
+    s.menu.sel = 1; s.box = ['ELIGE: 2']; await z(900);
+    s.box = ['HUYES COBARDEMENTE...'];
+    for (let i = 0; i < 10; i++){ s.hox -= 10; await z(70); }
+    await z(1800);
+  }
+}
+
+/* paso 4: defensa y pociones */
+async function run4(z){
+  for (;;){
+    reset({ hbar:true, dbar:true, heroHp:55 });
+    let p = 3; s.potions = p;
+    const items = () => ['1 ATACAR', '2 HUIR', '3 DEFENDER', '4 POCION (' + p + ')'];
+    s.menu = { items:items(), sel:0 };
+    s.box = ['ELIGE UNA ACCION']; await z(1500);
+
+    s.menu.sel = 2; s.box = ['ELIGE: 3']; await z(750);
+    s.shield = true; s.box = ['TE PREPARAS PARA EL GOLPE']; await z(950);
+    let e = await dragonAttack(z, { half:true, noKill:true });
+    s.box = ['DANO REDUCIDO A LA MITAD: -' + e]; await z(1300);
+    s.shield = false;
+
+    for (let k = 0; k < 4; k++){
+      s.menu.sel = 3; s.box = ['ELIGE: 4']; await z(750);
+      if (p > 0){
+        p--; s.potions = p; s.menu.items = items();
+        heal(20);
+        s.box = ['TE CURAS 20. QUEDAN: ' + p]; await z(1100);
+        await dragonAttack(z, { noKill:true }); await z(500);
+      } else {
+        s.box = ['SIN POCIONES: NO GASTAS TURNO']; await z(2400);
+      }
+    }
+    await z(1200);
+  }
+}
+
+/* paso 5: nombre, crítico y resumen */
+async function run5(z){
+  for (;;){
+    reset({ hbar:true, dbar:true, drgHp:70 });
+    const nm = 'ARAGORN';
+    for (let i = 1; i <= nm.length; i++){
+      s.box = ['NOMBRE DEL HEROE:', '> ' + nm.slice(0, i) + '_'];
+      await z(230);
+    }
+    await z(600);
+    s.name = nm; s.potions = 3;
+    s.menu = { items:['1 ATACAR', '2 HUIR', '3 DEFENDER', '4 POCION (3)'], sel:0 };
+    s.box = [nm + ' ENTRA EN COMBATE']; await z(1300);
+
+    let turns = 0, total = 0;
+    while (s.drgHp > 0){
+      turns++;
+      s.menu.sel = 0; s.box = [nm + ' ATACA!']; await z(550);
+      const d = await heroAttack(z); total += d;
+      s.box = ['ATACAS: -' + d]; await z(450);
+      if (s.drgHp > 0){
+        const crit = turns === 2 || rnd(1, 100) <= 15;
+        if (crit){ s.box = ['EL DRAGON RESPIRA FUEGO...']; await z(500); }
+        const e = await dragonAttack(z, { crit, noKill:true });
+        s.box = crit ? ['ATAQUE CRITICO! DANO x2: -' + e] : ['EL DRAGON TE ATACA: -' + e];
+        await z(1100);
+      }
+    }
+    s.menu = null; s.box = ['VENCISTE AL DRAGON'];
+    s.banner = 'VICTORIA'; s.bannerCol = '#ffd23f';
+    await z(1800);
+    s.banner = null; s.box = null;
+    s.summary = { shown:0, lines:[
+      '===== RESUMEN =====',
+      'HEROE: ' + nm,
+      'RESULTADO: VICTORIA',
+      'TURNOS JUGADOS: ' + turns,
+      'DANO TOTAL: ' + total
+    ]};
+    for (let i = 1; i <= 5; i++){ s.summary.shown = i; await z(500); }
+    await z(5000);
+  }
+}
+
+/* paso 6: elegir héroe */
+async function run6(z){
+  let idx = 0;
+  for (;;){
+    const target = idx % HEROES.length; idx++;
+    reset({ drgHp:120 });
+    s.select = { sel:0 };
+    const info = h => [h.name + '  VIDA ' + h.hp + '  DANO ' + h.dmin + '-' + h.dmax, h.perk];
+    s.box = ['ELIGE TU HEROE', '< > PARA CAMBIAR DE PERSONAJE']; await z(1500);
+    for (let i = 0; i <= target; i++){
+      s.select.sel = i; s.box = info(HEROES[i]); await z(1500);
+    }
+    const h = HEROES[target];
+    s.box = ['ELEGISTE: ' + h.name, h.perk]; await z(1400);
+    s.select = null;
+    Object.assign(s, { hspr:h.spr, heroMax:h.hp, heroHp:h.hp, heroShown:h.hp, hmin:h.dmin, hmax:h.dmax,
+                       name:h.name, hbar:true, dbar:true, potions:h.pot });
+    s.box = [h.name + ' ENTRA EN COMBATE']; await z(1300);
+    for (let t = 1; t <= 3; t++){
+      const power = t === 2;
+      s.box = ['TURNO ' + t]; await z(450);
+      const d = await heroAttack(z, { dbl: h.id === 'barbaro' && power });
+      const l1 = (h.id === 'barbaro' && power) ? 'GOLPE DOBLE! -' + d : 'ATACAS: -' + d;
+      s.box = ['TURNO ' + t, l1]; await z(500);
+      const e = await dragonAttack(z, { noKill:true, dodge: h.id === 'ladron' && power, block: h.id === 'caballero' && power });
+      let l2 = 'EL DRAGON TE ATACA: -' + e;
+      if (h.id === 'ladron' && power) l2 = 'ESQUIVAS EL ATAQUE DEL DRAGON';
+      if (h.id === 'caballero' && power) l2 = 'BLOQUEAS: RECIBES -' + e;
+      s.box = ['TURNO ' + t, l1, l2]; await z(1100);
+    }
+    if (h.id === 'barbaro'){ s.box = ['SIN POCIONES: ESA ES SU DEBILIDAD']; await z(2200); }
+    else if (h.id === 'mago'){ s.box = ['VIDA BAJA: CUIDADO CON EL DRAGON']; await z(2200); }
+    else await z(1000);
+  }
+}
+
+const runners = [run0, run1, run2, run3, run4, run5, run6];
+function startScene(i){
+  runId++;
+  const id = runId;
+  const z = ms => sleep(ms, id);
+  reset();
+  runners[i](z).catch(err => { if (err !== 'cancel') console.error(err); });
+}
+
+/* arranque */
+buildNav();
+go(0);
+})();
+</script>
+</body>
+</html>
